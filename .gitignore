@@ -1,0 +1,4 @@
+lane_merged_test/fastq/
+lane_merged_test/assembly/
+non_lane_merged_test/fastq/
+non_lane_merged_test/assembly/

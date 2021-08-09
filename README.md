@@ -5,12 +5,23 @@ Helping a colleague reviewing/testing the [seattleflu/assembly pipeline](https:/
 - [Testing seattleflu/assembly pipeline](#testing-seattlefluassembly-pipeline)
   - [What I haven't checked](#what-i-havent-checked)
   - [Peruse the repo](#peruse-the-repo)
-  - [Test the pipeline](#test-the-pipeline)
-    - [Copy test data](#copy-test-data)
+  - [Test the pipeline on non-lane merged data](#test-the-pipeline-on-non-lane-merged-data)
+    - [Get data](#get-data)
     - [Get pipeline](#get-pipeline)
     - [Create conda environment to run pipeline in](#create-conda-environment-to-run-pipeline-in)
-    - [Setup FASTQ files](#setup-fastq-files)
+    - [Setup/rename FASTQ files](#setuprename-fastq-files)
     - [Create NWGC ID/SFS UUID key-value pair file](#create-nwgc-idsfs-uuid-key-value-pair-file)
+    - [Configuration](#configuration)
+    - [Running the pipeline](#running-the-pipeline)
+  - [Test the pipeline on lane merged data](#test-the-pipeline-on-lane-merged-data)
+    - [Get data](#get-data-1)
+    - [Get pipeline](#get-pipeline-1)
+    - [Create conda environment to run pipeline in](#create-conda-environment-to-run-pipeline-in-1)
+    - [Setup/rename FASTQ files](#setuprename-fastq-files-1)
+    - [Create NWGC ID/SFS UUID key-value pair file](#create-nwgc-idsfs-uuid-key-value-pair-file-1)
+    - [Configuration](#configuration-1)
+    - [Pipeline development to accept lane merged data](#pipeline-development-to-accept-lane-merged-data)
+    - [Running the pipeline](#running-the-pipeline-1)
 
 ## What I haven't checked
 
@@ -30,35 +41,35 @@ Good signs:
 - Looks like it has a [jupyter notebook for plotting/exploring results](https://github.com/seattleflu/assembly/blob/master/scripts/2019-01-30%20Seattle%20flu-seq%20coverage%20statistics.ipynb) which can be nice for the user
 - Comes with a [bunch of reference genomes](https://github.com/seattleflu/assembly/tree/master/references) for alignment which is nice (so user doesn't need to find and manually download them)
 
-## Test the pipeline
+The pipeline expects 8 total FASTQ files for each individual sample, with Read 1 (R1) and Read 2 (R2) from 4 different lanes. Checked with Una and the data to be fed into the pipeline is going to be already pooled/lane-merged ("the lanes are merged during basecalling to make things easier down the line")
 
-### Copy test data
+Setup dirs for tesing pipelines
 
 ```bash
-cd /NGS/scratch/KSCBIOM/HumanGenomics/testing_seattleflu_assembly/
+mkdir /NGS/scratch/KSCBIOM/HumanGenomics/testing_seattleflu_assembly/{lane_merged_test,non_lane_merged_test}
+```
+
+## Test the pipeline on non-lane merged data
+
+### Get data
+
+```bash
+cd /NGS/scratch/KSCBIOM/HumanGenomics/testing_seattleflu_assembly/non_lane_merged_test
 
 mkdir fastq
 
-cp /NGS/active/VIR/FLUA/run_links/19CF0956_S80_R*_001.fastq.gz ./fastq
-cp /NGS/active/VIR/FLUA/run_links/19CF0957_S75_R*_001.fastq.gz ./fastq
-cp /NGS/active/VIR/FLUB/run_links/19CF0981_S86_R*_001.fastq.gz ./fastq
-cp /NGS/active/VIR/FLUB/run_links/19CF1345_S81_R*_001.fastq.gz ./fastq
+cp /NGS/active/VIR/FLUA/run_links/ ./fastq
+cp /NGS/active/VIR/FLUA/run_links/ ./fastq
+cp /NGS/active/VIR/FLUB/run_links/ ./fastq
+cp /NGS/active/VIR/FLUB/run_links/ ./fastq
 ```
-
-The pipeline expects 8 total FASTQ files for each individual sample, with Read 1 (R1) and Read 2 (R2) from 4 different lanes.
-
-Checked with Una and the data to be fed into the pipeline is going to be already pooled/lane-merged ("the lanes are merged during basecalling to make things easier down the line")
-
-I found the [rule where the lanes are merged in the pipeline](https://github.com/leahkemp/assembly/blob/master/Snakefile-base#L88) so I'll see if I can "turn off" the merging step so we can make the pipeline accept our pooled/lane-merged data
 
 ### Get pipeline
 
-I forken the pipeline
+Get pipeline
 
 ```bash
-cd /home/lkemp/testing_seattleflu_assembly/
-
-git clone https://github.com/leahkemp/assembly.git
+git clone https://github.com/seattleflu/assembly.git
 ```
 
 ### Create conda environment to run pipeline in
@@ -68,7 +79,7 @@ git clone https://github.com/leahkemp/assembly.git
 Create conda environment
 
 ```bash
-cd /NGS/scratch/KSCBIOM/HumanGenomics/testing_seattleflu_assembly/assembly/
+cd /NGS/scratch/KSCBIOM/HumanGenomics/testing_seattleflu_assembly/non_lane_merged_test/assembly/
 
 mamba env create -f envs/seattle-flu-environment.yaml
 ```
@@ -384,6 +395,205 @@ Activate conda environment
 conda activate seattle-flu
 ```
 
-### Setup FASTQ files
+### Setup/rename FASTQ files
+
 
 ### Create NWGC ID/SFS UUID key-value pair file
+
+### Configuration
+
+My config file at `config/config-flu-only.json`:
+
+```json
+{
+    "fastq_directory" :
+      "/NGS/scratch/KSCBIOM/HumanGenomics/testing_seattleflu_assembly/non_lane_merged_test/fastq/",
+    "ignored_samples":
+      {
+        "Undetermined": {}
+      },
+    "sample_reference_pairs":
+      {
+        "318571": ["h1n1pdm_Michigan_45_2015"],
+        "318572": ["h1n1pdm_Michigan_45_2015"],
+        "318573": ["h3n2_Texas_50_2012"],
+        "318574": ["h3n2_Texas_50_2012"],
+        "318575": ["h1n1pdm_Michigan_45_2015"],
+        "318576": ["h3n2_Texas_50_2012"],
+        "318578": ["h1n1pdm_Michigan_45_2015"],
+        "318579": ["h3n2_Texas_50_2012"],
+        "318582": ["h3n2_Texas_50_2012"],
+        "318583": ["h3n2_Texas_50_2012"],
+        "318584": ["h1n1pdm_Michigan_45_2015"],
+        "318586": ["h3n2_Texas_50_2012"],
+        "318588": ["h3n2_Texas_50_2012"],
+        "318592": ["h1n1pdm_Michigan_45_2015"],
+        "318594": ["h3n2_Texas_50_2012"],
+        "318595": ["h1n1pdm_Michigan_45_2015"],
+        "318596": ["h3n2_Texas_50_2012"],
+        "318601": ["h3n2_Texas_50_2012"],
+        "318602": ["h1n1pdm_Michigan_45_2015"],
+        "318604": ["h1n1pdm_Michigan_45_2015"],
+        "318605": ["h3n2_Texas_50_2012"],
+        "318606": ["h3n2_Texas_50_2012"],
+        "318608": ["h3n2_Texas_50_2012"],
+        "318609": ["h3n2_Texas_50_2012", "h1n1pdm_Michigan_45_2015"],
+        "318610": ["h3n2_Texas_50_2012"],
+        "318612": ["h3n2_Texas_50_2012"],
+        "318613": ["h3n2_Texas_50_2012"],
+        "318614": ["h1n1pdm_Michigan_45_2015"],
+        "318616": ["h3n2_Texas_50_2012"],
+        "318617": ["h3n2_Texas_50_2012"],
+        "318618": ["h3n2_Texas_50_2012"],
+        "318619": ["h1n1pdm_Michigan_45_2015"],
+        "318620": ["h1n1pdm_Michigan_45_2015"],
+        "318622": ["h1n1pdm_Michigan_45_2015"],
+        "318623": ["h3n2_Texas_50_2012"],
+        "318625": ["h3n2_Texas_50_2012"],
+        "318626": ["h3n2_Texas_50_2012"],
+        "318627": ["h3n2_Texas_50_2012"],
+        "318628": ["h1n1pdm_Michigan_45_2015"],
+        "318630": ["h1n1pdm_Michigan_45_2015"],
+        "318631": ["h1n1pdm_Michigan_45_2015"],
+        "318632": ["h1n1pdm_Michigan_45_2015"],
+        "318634": ["h1n1pdm_Michigan_45_2015"],
+        "318637": ["h3n2_Texas_50_2012"],
+        "318638": ["h3n2_Texas_50_2012"],
+        "318640": ["h3n2_Texas_50_2012"],
+        "318642": ["h3n2_Texas_50_2012"],
+        "318643": ["h3n2_Texas_50_2012"],
+        "318646": ["h3n2_Texas_50_2012"],
+        "318648": ["h3n2_Texas_50_2012"],
+        "318650": ["h3n2_Texas_50_2012"],
+        "318651": ["h3n2_Texas_50_2012"],
+        "318652": ["h3n2_Texas_50_2012"],
+        "318653": ["h1n1pdm_Michigan_45_2015"],
+        "318654": ["h1n1pdm_Michigan_45_2015"],
+        "318655": ["h1n1pdm_Michigan_45_2015"],
+        "318659": ["h3n2_Texas_50_2012"],
+        "318661": ["h3n2_Texas_50_2012"],
+        "318662": ["h3n2_Texas_50_2012"],
+        "318665": ["h1n1pdm_Michigan_45_2015"]
+      },
+    "barcode_match" : {
+        "mapper_filepath": "~/Downloads/sample-target-match.xlsx",
+        "nwgc_column": "sample",
+        "sfs_column": "uuid",
+        "key_value_filepath": "test_data/key_value.txt"
+    },
+    "raw_read_length": 150,
+    "reference_viruses" :
+      {
+        "h1n1pdm_Michigan_45_2015" : {},
+        "vic_Brisbane_60_2008" : {},
+        "h3n2_Texas_50_2012": {},
+        "yam_Wisconsin_01_2010": {}
+      },
+    "params" :
+      {
+        "trimmomatic" :
+          {
+            "paired_end" : "PE",
+            "adapters" : "illumina-adapters.fasta",
+            "illumina_clip" : "1:30:10",
+            "window_size" : "5",
+            "trim_qscore" : "30",
+            "minimum_length" : "50"
+          },
+        "bowtie2" :
+          {
+            "threads" : "4",
+            "all" : "-a"
+          },
+        "mpileup" :
+          {
+            "depth" : "1000000"
+          },
+        "varscan" :
+          {
+            "min_cov" : "20",
+            "snp_qual_threshold" : "30",
+            "snp_frequency" : "0.50"
+          }
+      }
+}
+```
+
+### Running the pipeline
+
+Dryrun
+
+```bash
+snakemake --dryrun --configfile config/config-flu-only.json -k
+```
+
+Full run
+
+```bash
+snakemake --configfile config/config-flu-only.json -k
+```
+
+## Test the pipeline on lane merged data
+
+### Get data
+
+This is the type of data we're expecting to be running the pipeline on
+
+```bash
+cd /NGS/scratch/KSCBIOM/HumanGenomics/testing_seattleflu_assembly/lane_merged_test/
+
+mkdir fastq
+
+cp /NGS/active/VIR/FLUA/run_links/19CF0956_S80_R*_001.fastq.gz ./fastq
+cp /NGS/active/VIR/FLUA/run_links/19CF0957_S75_R*_001.fastq.gz ./fastq
+cp /NGS/active/VIR/FLUB/run_links/19CF0981_S86_R*_001.fastq.gz ./fastq
+cp /NGS/active/VIR/FLUB/run_links/19CF1345_S81_R*_001.fastq.gz ./fastq
+```
+
+### Get pipeline
+
+I forken the pipeline for pipeline development purposes
+
+```bash
+cd /home/lkemp/testing_seattleflu_assembly/
+
+git clone https://github.com/leahkemp/assembly.git
+```
+
+### Create conda environment to run pipeline in
+
+Already made, activate the conda environment
+
+```bash
+conda activate seattle-flu
+```
+
+### Setup/rename FASTQ files
+
+### Create NWGC ID/SFS UUID key-value pair file
+
+### Configuration
+
+My config file at `config/config-flu-only.json`:
+
+```json
+
+```
+
+### Pipeline development to accept lane merged data
+
+I found the [rule where the lanes are merged in the pipeline](https://github.com/leahkemp/assembly/blob/master/Snakefile-base#L88) so I'll see if I can "turn off" the merging step so we can make the pipeline accept our pooled/lane-merged data, first I'll test on non-lane merged data to make sure the pipeline works before developing it to accept lane-merged data
+
+### Running the pipeline
+
+Dryrun
+
+```bash
+snakemake --dryrun --configfile config/config-flu-only.json -k
+```
+
+Full run
+
+```bash
+snakemake --configfile config/config-flu-only.json -k
+```
