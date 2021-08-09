@@ -2,6 +2,16 @@
 
 Helping a colleague reviewing/testing the [seattleflu/assembly pipeline](https://github.com/seattleflu/assembly)
 
+- [Testing seattleflu/assembly pipeline](#testing-seattlefluassembly-pipeline)
+  - [What I haven't checked](#what-i-havent-checked)
+  - [Peruse the repo](#peruse-the-repo)
+  - [Test the pipeline](#test-the-pipeline)
+    - [Copy test data](#copy-test-data)
+    - [Get pipeline](#get-pipeline)
+    - [Create conda environment to run pipeline in](#create-conda-environment-to-run-pipeline-in)
+    - [Setup FASTQ files](#setup-fastq-files)
+    - [Create NWGC ID/SFS UUID key-value pair file](#create-nwgc-idsfs-uuid-key-value-pair-file)
+
 ## What I haven't checked
 
 - If this pipeline is the most appropriate/ideal for your analysis
@@ -377,10 +387,3 @@ conda activate seattle-flu
 ### Setup FASTQ files
 
 ### Create NWGC ID/SFS UUID key-value pair file
-
-## "How to" guide to running the pipeline on ESR's production network
-
-### Pre-requisites
-
-- [Conda](https://docs.conda.io/projects/continuumio-conda/en/latest/user-guide/install/linux.html) or [Mamba](https://mamba.readthedocs.io/en/latest/installation.html) (prefered - faster, more stable)
-
