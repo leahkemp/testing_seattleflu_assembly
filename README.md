@@ -18,7 +18,6 @@ Helping a colleague reviewing/testing the [seattleflu/assembly pipeline](https:/
     - [Get pipeline](#get-pipeline-1)
     - [Create conda environment to run pipeline in](#create-conda-environment-to-run-pipeline-in-1)
     - [Setup/rename FASTQ files](#setuprename-fastq-files-1)
-    - [Create NWGC ID/SFS UUID key-value pair file](#create-nwgc-idsfs-uuid-key-value-pair-file-1)
     - [Configuration](#configuration-1)
     - [Pipeline development to accept lane merged data](#pipeline-development-to-accept-lane-merged-data)
     - [Running the pipeline](#running-the-pipeline-1)
@@ -40,6 +39,7 @@ Good signs:
 - Has a [conda env](https://github.com/seattleflu/assembly/blob/master/envs/seattle-flu-environment.yaml) to (easily) install all software the pipeline will use (would be *better* for reproducibility/portability if this software is containerised, but conda envs are pretty standard)
 - Looks like it has a [jupyter notebook for plotting/exploring results](https://github.com/seattleflu/assembly/blob/master/scripts/2019-01-30%20Seattle%20flu-seq%20coverage%20statistics.ipynb) which can be nice for the user
 - Comes with a [bunch of reference genomes](https://github.com/seattleflu/assembly/tree/master/references) for alignment which is nice (so user doesn't need to find and manually download them)
+- They're not currently really writing log files which can really do you're head in when debugging the pipeline since you're not capturing any errors/outputs the software in the pipeline is throwing out
 
 The pipeline expects 8 total FASTQ files for each individual sample, with Read 1 (R1) and Read 2 (R2) from 4 different lanes. Checked with Una and the data to be fed into the pipeline is going to be already pooled/lane-merged ("the lanes are merged during basecalling to make things easier down the line")
 
@@ -58,10 +58,10 @@ cd /NGS/scratch/KSCBIOM/HumanGenomics/testing_seattleflu_assembly/non_lane_merge
 
 mkdir fastq
 
-cp /NGS/active/VIR/FLUA/run_links/ ./fastq
-cp /NGS/active/VIR/FLUA/run_links/ ./fastq
-cp /NGS/active/VIR/FLUB/run_links/ ./fastq
-cp /NGS/active/VIR/FLUB/run_links/ ./fastq
+cp /NGS/active/VIR/FLUA/analysis/pipeline_test/VIR_FLUA/19CF0956_S80_L00*_R*_001.fastq.gz ./fastq
+cp /NGS/active/VIR/FLUA/analysis/pipeline_test/VIR_FLUA/19CF0957_S75_L00*_R*_001.fastq.gz ./fastq
+cp /NGS/active/VIR/FLUA/analysis/pipeline_test/VIR_FLUB/19CF1345_S81_L00*_R*_001.fastq.gz ./fastq
+cp /NGS/active/VIR/FLUA/analysis/pipeline_test/VIR_FLUB/19CF0981_S86_L00*_R*_001.fastq.gz ./fastq
 ```
 
 ### Get pipeline
@@ -70,6 +70,9 @@ Get pipeline
 
 ```bash
 git clone https://github.com/seattleflu/assembly.git
+
+# Checkout a specific release of the pipeline so I'm not on the buggy dev end of the repo
+git checkout v1.0
 ```
 
 ### Create conda environment to run pipeline in
@@ -524,6 +527,7 @@ My config file at `config/config-flu-only.json`:
 Dryrun
 
 ```bash
+cd /NGS/scratch/KSCBIOM/HumanGenomics/testing_seattleflu_assembly/non_lane_merged_test/assembly/
 snakemake --dryrun --configfile config/config-flu-only.json -k
 ```
 
@@ -532,6 +536,533 @@ Full run
 ```bash
 snakemake --configfile config/config-flu-only.json -k
 ```
+
+Currently keeps erroring out with very little info as to why
+
+```bash
+SyntaxError in line 309 of /NGS/scratch/KSCBIOM/HumanGenomics/testing_seattleflu_assembly/non_lane_merged_test/assembly/Snakefile:
+invalid syntax
+```
+
+So it says it's erroring out at [line 309](https://github.com/seattleflu/assembly/blob/v1.0/Snakefile#L309) which is a checkpoint? I haven't seent these puppies before.
+
+Ok so [based on this](https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html?highlight=checkpoint#data-dependent-conditional-execution) it looks like "checkpoints" were introduced in Snakemake version 5.4. When I installed snakemake as a part of the `envs/seattle-flu-environment.yaml` file, it installed version 3.13.3, which could explain why snakmemake is erroring out here, see:
+
+```bash
+which snakemake
+```
+
+My output:
+
+```bash
+~/anaconda3/envs/seattle-flu/bin/snakemake
+```
+
+```bash
+snakemake --version
+```
+
+My output:
+
+```bash
+3.13.3
+```
+
+*That made me realise it not the best idea for them to not specify software versions in their [conda environment](https://github.com/seattleflu/assembly/blob/v1.0/envs/seattle-flu-environment.yaml) for the pipeline...it would be hard for someone else to reproduce the analyses you've done with this pipeline unless you give them your specific conda env setup (which probably wouldn't happen). These software should really be pinned down to specific versions at a minimum (even better having the software containerised), but that would be a fairly straightforward pipeline development*
+
+Try updating the Snakemake version
+
+```bash
+mamba update snakemake
+```
+
+*That prompted an update of a shittonne of software*
+
+My output:
+
+```bash
+
+                  __    __    __    __
+                 /  \  /  \  /  \  /  \
+                /    \/    \/    \/    \
+███████████████/  /██/  /██/  /██/  /████████████████████████
+              /  / \   / \   / \   / \  \____
+             /  /   \_/   \_/   \_/   \    o \__,
+            / _/                       \_____/  `
+            |/
+        ███╗   ███╗ █████╗ ███╗   ███╗██████╗  █████╗
+        ████╗ ████║██╔══██╗████╗ ████║██╔══██╗██╔══██╗
+        ██╔████╔██║███████║██╔████╔██║██████╔╝███████║
+        ██║╚██╔╝██║██╔══██║██║╚██╔╝██║██╔══██╗██╔══██║
+        ██║ ╚═╝ ██║██║  ██║██║ ╚═╝ ██║██████╔╝██║  ██║
+        ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚═════╝ ╚═╝  ╚═╝
+
+        Supported by @QuantStack
+
+        GitHub:  https://github.com/QuantStack/mamba
+        Twitter: https://twitter.com/QuantStack
+
+█████████████████████████████████████████████████████████████
+
+Getting  conda-forge linux-64
+Getting  conda-forge noarch
+Getting  bioconda linux-64
+Getting  bioconda noarch
+Getting  pkgs/main noarch
+Getting  pkgs/main linux-64
+Getting  pkgs/r noarch
+Getting  pkgs/r linux-64
+
+Looking for: ['snakemake', 'python 3.6.9']
+
+198685 packages in https://conda.anaconda.org/conda-forge/linux-64
+65474 packages in https://conda.anaconda.org/conda-forge/noarch
+38595 packages in https://conda.anaconda.org/bioconda/linux-64
+29945 packages in https://conda.anaconda.org/bioconda/noarch
+22706 packages in https://repo.anaconda.com/pkgs/main/linux-64
+4124 packages in https://repo.anaconda.com/pkgs/main/noarch
+6637 packages in https://repo.anaconda.com/pkgs/r/linux-64
+5025 packages in https://repo.anaconda.com/pkgs/r/noarch
+
+## Package Plan ##
+
+  environment location: /home/lkemp/anaconda3/envs/seattle-flu
+
+  added / updated specs:
+    - python==3.6.9
+    - snakemake
+
+
+The following packages will be downloaded:
+
+    package                    |            build
+    ---------------------------|-----------------
+    aioeasywebdav-2.4.0        |py37hc8dfbb8_1001          18 KB  conda-forge
+    aiohttp-3.7.4.post0        |   py37h5e8e339_0         625 KB  conda-forge
+    argon2-cffi-20.1.0         |   py37h8f50634_2          47 KB  conda-forge
+    async-timeout-3.0.1        |           py37_0          12 KB
+    async_generator-1.10       |   py37h28b3542_0          39 KB
+    atk-1.0-2.36.0             |       haf93ef1_1         530 KB  conda-forge
+    bcrypt-3.2.0               |   py37h8f50634_1          44 KB  conda-forge
+    biopython-1.79             |   py37h5e8e339_0         2.6 MB  conda-forge
+    blas-1.1                   |         openblas           1 KB  conda-forge
+    boto3-1.18.17              |     pyhd8ed1ab_0          70 KB  conda-forge
+    botocore-1.21.17           |     pyhd8ed1ab_0         4.8 MB  conda-forge
+    bowtie2-2.4.4              |   py37h13ad519_0        15.1 MB  bioconda
+    brotlipy-0.7.0             |py37h27cfd23_1003         320 KB
+    cffi-1.14.4                |   py37h11fe52a_0         224 KB  conda-forge
+    chardet-4.0.0              |py37h06a4308_1003         195 KB
+    coincbc-2.10.5             |       hab63836_0         7.9 MB  conda-forge
+    configargparse-1.5.2       |     pyhd8ed1ab_0          32 KB  conda-forge
+    connection_pool-0.0.3      |     pyhd3deb0d_0           8 KB  conda-forge
+    cryptography-3.4.7         |   py37hd23ed53_0         904 KB
+    datrie-0.8.2               |   py37h5e8e339_2         152 KB  conda-forge
+    docutils-0.17.1            |   py37h06a4308_1         680 KB
+    entrypoints-0.3            |py37hc8dfbb8_1002          13 KB  conda-forge
+    fftw-3.3.9                 |       h27cfd23_1         2.3 MB
+    filelock-3.0.12            |     pyhd3eb1b0_1          10 KB
+    gdk-pixbuf-2.38.2          |       h3f25603_4         653 KB  conda-forge
+    ghostscript-9.54.0         |       h9c3ff4c_1        57.0 MB  conda-forge
+    gobject-introspection-1.66.1|   py37h619baee_1         1.4 MB  conda-forge
+    google-api-core-1.31.1     |     pyhd8ed1ab_0          59 KB  conda-forge
+    google-api-python-client-2.15.0|     pyhd8ed1ab_0         3.9 MB  conda-forge
+    google-auth-1.28.0         |     pyhd3eb1b0_0          72 KB
+    google-cloud-core-1.7.2    |     pyh6c4a22f_0          26 KB  conda-forge
+    google-cloud-storage-1.41.0|     pyhd3eb1b0_0          72 KB
+    google-crc32c-1.1.2        |   py37hab72019_0          24 KB  conda-forge
+    google-resumable-media-1.3.3|     pyh6c4a22f_0          41 KB  conda-forge
+    googleapis-common-protos-1.53.0|   py37h89c1867_0         124 KB  conda-forge
+    graphviz-2.42.3            |       h6939c30_2         7.3 MB  conda-forge
+    grpcio-1.33.2              |   py37haffed2e_2         1.8 MB  conda-forge
+    gtk2-2.24.32               |       h90f3771_0         7.3 MB  conda-forge
+    gts-0.7.6                  |       h08bb679_0         400 KB  conda-forge
+    imagemagick-7.0.9_1        |  pl526ha477544_0         2.5 MB  conda-forge
+    importlib-metadata-4.6.3   |   py37h89c1867_0          31 KB  conda-forge
+    importlib_metadata-4.6.3   |       hd8ed1ab_0           3 KB  conda-forge
+    iniconfig-1.1.1            |     pyhd3eb1b0_0           8 KB
+    ipykernel-5.5.5            |   py37h085eea5_0         167 KB  conda-forge
+    ipython-7.26.0             |   py37hb070fc8_0        1005 KB
+    jedi-0.18.0                |   py37h89c1867_2         923 KB  conda-forge
+    jsonschema-3.2.0           |           py37_1          91 KB
+    jupyter_core-4.7.1         |   py37h89c1867_0          72 KB  conda-forge
+    jupyterlab_pygments-0.1.2  |     pyh9f0ad1d_0           8 KB  conda-forge
+    kiwisolver-1.3.1           |   py37h2527ec5_1          78 KB  conda-forge
+    libcrc32c-1.1.1            |       he6710b0_2          20 KB
+    libcroco-0.6.13            |       h8d621e5_0         136 KB  conda-forge
+    libprotobuf-3.17.2         |       h780b84a_1         2.5 MB  conda-forge
+    librsvg-2.46.2             |       h33a7fed_1         7.5 MB  conda-forge
+    markupsafe-2.0.1           |   py37h27cfd23_0          21 KB
+    matplotlib-base-3.3.1      |   py37hd478181_1         6.7 MB  conda-forge
+    matplotlib-inline-0.1.2    |     pyhd8ed1ab_2          11 KB  conda-forge
+    mistune-0.8.4              |py37h5e8e339_1004          54 KB  conda-forge
+    more-itertools-8.8.0       |     pyhd8ed1ab_0          39 KB  conda-forge
+    multidict-5.1.0            |   py37h27cfd23_2          66 KB
+    nb_conda_kernels-2.3.1     |   py37h89c1867_0          27 KB  conda-forge
+    nbclient-0.5.3             |     pyhd8ed1ab_0          67 KB  conda-forge
+    nbconvert-6.1.0            |   py37h89c1867_0         548 KB  conda-forge
+    nest-asyncio-1.5.1         |     pyhd8ed1ab_0           9 KB  conda-forge
+    networkx-2.6.2             |     pyhd8ed1ab_0         1.5 MB  conda-forge
+    notebook-6.4.2             |     pyha770c72_0         6.2 MB  conda-forge
+    numpy-1.21.1               |   py37h038b26d_0         6.1 MB  conda-forge
+    openjpeg-2.3.1             |       hf7af979_3         395 KB  conda-forge
+    pandas-1.3.1               |   py37h219a48f_0        12.7 MB  conda-forge
+    parso-0.8.2                |     pyhd8ed1ab_0          68 KB  conda-forge
+    pexpect-4.8.0              |           py37_1          77 KB
+    pickleshare-0.7.5          |py37hc8dfbb8_1002          13 KB  conda-forge
+    pkg-config-0.29.2          |    h516909a_1008         120 KB  conda-forge
+    pluggy-0.13.1              |   py37h89c1867_4          29 KB  conda-forge
+    protobuf-3.17.2            |   py37hcd2ae1e_0         347 KB  conda-forge
+    psutil-5.8.0               |   py37h27cfd23_1         329 KB
+    pulp-2.4                   |   py37h89c1867_0         130 KB  conda-forge
+    py-1.10.0                  |     pyhd3eb1b0_0          76 KB
+    pyasn1-modules-0.2.8       |             py_0          72 KB
+    pygraphviz-1.7             |   py37h0b1d2a2_0         125 KB  conda-forge
+    pynacl-1.4.0               |   py37h8f50634_2         1.3 MB  conda-forge
+    pyrsistent-0.17.3          |   py37h5e8e339_2          89 KB  conda-forge
+    pysocks-1.7.1              |   py37h89c1867_3          27 KB  conda-forge
+    pytest-6.2.4               |   py37h06a4308_2         420 KB
+    python-3.7.7               |h191fe78_0_cpython        45.1 MB
+    python-irodsclient-1.0.0   |     pyhd8ed1ab_0         104 KB  conda-forge
+    python_abi-3.7             |          2_cp37m           4 KB  conda-forge
+    pyyaml-5.4.1               |   py37h27cfd23_1         168 KB
+    pyzmq-17.1.2               |   py37hae99301_0         1.0 MB  conda-forge
+    rpy2-2.9.4                 |py37mro351h6853232_0         267 KB
+    rsa-4.7.2                  |     pyhd3eb1b0_1          28 KB
+    s3transfer-0.5.0           |     pyhd8ed1ab_0          55 KB  conda-forge
+    samtools-1.10              |       h2e538c0_3         338 KB  bioconda
+    scipy-1.6.2                |   py37hf56f3a7_1        15.4 MB
+    setuptools-52.0.0          |   py37h06a4308_0         710 KB
+    simplejson-3.17.3          |   py37h7f8727e_2          98 KB
+    smart_open-5.1.0           |     pyhd8ed1ab_1          42 KB  conda-forge
+    snakemake-6.6.1            |       hdfd78af_0           7 KB  bioconda
+    snakemake-minimal-6.6.1    |     pyhdfd78af_0         206 KB  bioconda
+    statsmodels-0.12.2         |   py37h902c9e0_0        11.3 MB  conda-forge
+    tabulate-0.8.9             |   py37h06a4308_0          40 KB
+    terminado-0.10.1           |   py37h89c1867_0          26 KB  conda-forge
+    tornado-6.1                |   py37h5e8e339_1         646 KB  conda-forge
+    traitlets-5.0.5            |     pyhd3eb1b0_0          81 KB
+    wrapt-1.12.1               |   py37h5e8e339_3          47 KB  conda-forge
+    yarl-1.5.1                 |   py37h8f50634_0         138 KB  conda-forge
+    zstd-1.4.9                 |       haebb681_0         480 KB
+    ------------------------------------------------------------
+                                           Total:       245.6 MB
+
+The following NEW packages will be INSTALLED:
+
+  aioeasywebdav      conda-forge/linux-64::aioeasywebdav-2.4.0-py37hc8dfbb8_1001
+  aiohttp            conda-forge/linux-64::aiohttp-3.7.4.post0-py37h5e8e339_0
+  amply              conda-forge/noarch::amply-0.1.4-py_0
+  appdirs            conda-forge/noarch::appdirs-1.4.4-pyh9f0ad1d_0
+  async-timeout      pkgs/main/linux-64::async-timeout-3.0.1-py37_0
+  async_generator    pkgs/main/linux-64::async_generator-1.10-py37h28b3542_0
+  atk                conda-forge/linux-64::atk-2.36.0-ha770c72_4
+  atk-1.0            conda-forge/linux-64::atk-1.0-2.36.0-haf93ef1_1
+  attmap             conda-forge/noarch::attmap-0.13.0-pyhd8ed1ab_0
+  blas               conda-forge/linux-64::blas-1.1-openblas
+  boto3              conda-forge/noarch::boto3-1.18.17-pyhd8ed1ab_0
+  botocore           conda-forge/noarch::botocore-1.21.17-pyhd8ed1ab_0
+  cachetools         conda-forge/noarch::cachetools-4.2.2-pyhd8ed1ab_0
+  charset-normalizer conda-forge/noarch::charset-normalizer-2.0.0-pyhd8ed1ab_0
+  coincbc            conda-forge/linux-64::coincbc-2.10.5-hab63836_0
+  configargparse     conda-forge/noarch::configargparse-1.5.2-pyhd8ed1ab_0
+  connection_pool    conda-forge/noarch::connection_pool-0.0.3-pyhd3deb0d_0
+  datrie             conda-forge/linux-64::datrie-0.8.2-py37h5e8e339_2
+  fftw               pkgs/main/linux-64::fftw-3.3.9-h27cfd23_1
+  filelock           pkgs/main/noarch::filelock-3.0.12-pyhd3eb1b0_1
+  font-ttf-inconsol~ conda-forge/noarch::font-ttf-inconsolata-3.000-h77eed37_0
+  font-ttf-source-c~ conda-forge/noarch::font-ttf-source-code-pro-2.038-h77eed37_0
+  font-ttf-ubuntu    conda-forge/noarch::font-ttf-ubuntu-0.83-hab24e00_0
+  fonts-conda-ecosy~ conda-forge/noarch::fonts-conda-ecosystem-1-0
+  fonts-conda-forge  conda-forge/noarch::fonts-conda-forge-1-0
+  gdk-pixbuf         conda-forge/linux-64::gdk-pixbuf-2.38.2-h3f25603_4
+  ghostscript        conda-forge/linux-64::ghostscript-9.54.0-h9c3ff4c_1
+  giflib             conda-forge/linux-64::giflib-5.1.7-h516909a_1
+  gitdb              conda-forge/noarch::gitdb-4.0.7-pyhd8ed1ab_0
+  gitpython          pkgs/main/noarch::gitpython-3.1.18-pyhd3eb1b0_1
+  gobject-introspec~ conda-forge/linux-64::gobject-introspection-1.66.1-py37h619baee_1
+  google-api-core    conda-forge/noarch::google-api-core-1.31.1-pyhd8ed1ab_0
+  google-api-python~ conda-forge/noarch::google-api-python-client-2.15.0-pyhd8ed1ab_0
+  google-auth        pkgs/main/noarch::google-auth-1.28.0-pyhd3eb1b0_0
+  google-auth-httpl~ conda-forge/noarch::google-auth-httplib2-0.1.0-pyhd8ed1ab_0
+  google-cloud-core  conda-forge/noarch::google-cloud-core-1.7.2-pyh6c4a22f_0
+  google-cloud-stor~ pkgs/main/noarch::google-cloud-storage-1.41.0-pyhd3eb1b0_0
+  google-crc32c      conda-forge/linux-64::google-crc32c-1.1.2-py37hab72019_0
+  google-resumable-~ conda-forge/noarch::google-resumable-media-1.3.3-pyh6c4a22f_0
+  googleapis-common~ conda-forge/linux-64::googleapis-common-protos-1.53.0-py37h89c1867_0
+  graphviz           conda-forge/linux-64::graphviz-2.42.3-h6939c30_2
+  grpcio             conda-forge/linux-64::grpcio-1.33.2-py37haffed2e_2
+  gtk2               conda-forge/linux-64::gtk2-2.24.32-h90f3771_0
+  gts                conda-forge/linux-64::gts-0.7.6-h08bb679_0
+  httplib2           conda-forge/noarch::httplib2-0.19.1-pyhd8ed1ab_0
+  imagemagick        conda-forge/linux-64::imagemagick-7.0.9_1-pl526ha477544_0
+  iniconfig          pkgs/main/noarch::iniconfig-1.1.1-pyhd3eb1b0_0
+  jbig               conda-forge/linux-64::jbig-2.1-h7f98852_2003
+  jmespath           conda-forge/noarch::jmespath-0.10.0-pyh9f0ad1d_0
+  jupyterlab_pygmen~ conda-forge/noarch::jupyterlab_pygments-0.1.2-pyh9f0ad1d_0
+  libcrc32c          pkgs/main/linux-64::libcrc32c-1.1.1-he6710b0_2
+  libcroco           conda-forge/linux-64::libcroco-0.6.13-h8d621e5_0
+  libprotobuf        conda-forge/linux-64::libprotobuf-3.17.2-h780b84a_1
+  librsvg            conda-forge/linux-64::librsvg-2.46.2-h33a7fed_1
+  libtool            conda-forge/linux-64::libtool-2.4.6-h58526e2_1007
+  libwebp            conda-forge/linux-64::libwebp-1.0.2-hf4e8a37_4
+  logmuse            conda-forge/noarch::logmuse-0.2.6-pyh8c360ce_0
+  matplotlib-inline  conda-forge/noarch::matplotlib-inline-0.1.2-pyhd8ed1ab_2
+  more-itertools     conda-forge/noarch::more-itertools-8.8.0-pyhd8ed1ab_0
+  multidict          pkgs/main/linux-64::multidict-5.1.0-py37h27cfd23_2
+  nbclient           conda-forge/noarch::nbclient-0.5.3-pyhd8ed1ab_0
+  nest-asyncio       conda-forge/noarch::nest-asyncio-1.5.1-pyhd8ed1ab_0
+  networkx           conda-forge/noarch::networkx-2.6.2-pyhd8ed1ab_0
+  oauth2client       conda-forge/noarch::oauth2client-4.1.3-py_0
+  openblas           conda-forge/linux-64::openblas-0.3.10-pthreads_hf183345_4
+  openjpeg           conda-forge/linux-64::openjpeg-2.3.1-hf7af979_3
+  peppy              conda-forge/noarch::peppy-0.31.1-pyhd8ed1ab_0
+  pkg-config         conda-forge/linux-64::pkg-config-0.29.2-h516909a_1008
+  pluggy             conda-forge/linux-64::pluggy-0.13.1-py37h89c1867_4
+  prettytable        conda-forge/noarch::prettytable-2.1.0-pyhd8ed1ab_0
+  protobuf           conda-forge/linux-64::protobuf-3.17.2-py37hcd2ae1e_0
+  pulp               conda-forge/linux-64::pulp-2.4-py37h89c1867_0
+  py                 pkgs/main/noarch::py-1.10.0-pyhd3eb1b0_0
+  pyasn1             conda-forge/noarch::pyasn1-0.4.8-py_0
+  pyasn1-modules     pkgs/main/noarch::pyasn1-modules-0.2.8-py_0
+  pycparser          conda-forge/noarch::pycparser-2.20-pyh9f0ad1d_2
+  pygraphviz         conda-forge/linux-64::pygraphviz-1.7-py37h0b1d2a2_0
+  pytest             pkgs/main/linux-64::pytest-6.2.4-py37h06a4308_2
+  python-irodsclient conda-forge/noarch::python-irodsclient-1.0.0-pyhd8ed1ab_0
+  ratelimiter        conda-forge/linux-64::ratelimiter-1.2.0-py37hc8dfbb8_1001
+  rsa                pkgs/main/noarch::rsa-4.7.2-pyhd3eb1b0_1
+  s3transfer         conda-forge/noarch::s3transfer-0.5.0-pyhd8ed1ab_0
+  simplejson         pkgs/main/linux-64::simplejson-3.17.3-py37h7f8727e_2
+  slacker            conda-forge/noarch::slacker-0.14.0-py_0
+  smart_open         conda-forge/noarch::smart_open-5.1.0-pyhd8ed1ab_1
+  smmap              pkgs/main/noarch::smmap-3.0.5-pyhd3eb1b0_0
+  snakemake-minimal  bioconda/noarch::snakemake-minimal-6.6.1-pyhdfd78af_0
+  stopit             conda-forge/noarch::stopit-1.1.2-py_0
+  tabulate           pkgs/main/linux-64::tabulate-0.8.9-py37h06a4308_0
+  toml               conda-forge/noarch::toml-0.10.2-pyhd8ed1ab_0
+  toposort           conda-forge/noarch::toposort-1.6-pyhd8ed1ab_0
+  typing-extensions  conda-forge/noarch::typing-extensions-3.10.0.0-hd8ed1ab_0
+  typing_extensions  conda-forge/noarch::typing_extensions-3.10.0.0-pyha770c72_0
+  ubiquerg           conda-forge/noarch::ubiquerg-0.6.1-pyh9f0ad1d_0
+  uritemplate        conda-forge/noarch::uritemplate-3.0.1-py_0
+  veracitools        conda-forge/noarch::veracitools-0.1.3-py_0
+  xmlrunner          conda-forge/noarch::xmlrunner-1.7.7-py_0
+  xorg-libxpm        conda-forge/linux-64::xorg-libxpm-3.5.13-h516909a_0
+  xorg-libxt         conda-forge/linux-64::xorg-libxt-1.1.5-h516909a_1003
+  yarl               conda-forge/linux-64::yarl-1.5.1-py37h8f50634_0
+
+The following packages will be UPDATED:
+
+  argon2-cffi                         20.1.0-py36h97a6639_1 --> 20.1.0-py37h8f50634_2
+  bcrypt                               3.2.0-py36h97a6639_0 --> 3.2.0-py37h8f50634_1
+  biopython                             1.77-py36h97a6639_1 --> 1.79-py37h5e8e339_0
+  bowtie2                            2.3.5.1-py36he513fc3_0 --> 2.4.4-py37h13ad519_0
+  brotlipy           conda-forge::brotlipy-0.7.0-py36h97a6~ --> pkgs/main::brotlipy-0.7.0-py37h27cfd23_1003
+  certifi                          2020.6.20-py36hc560c46_0 --> 2021.5.30-py37h89c1867_0
+  cffi               conda-forge/noarch::cffi-1.14.0-2_pypy --> conda-forge/linux-64::cffi-1.14.4-py37h11fe52a_0
+  chardet            conda-forge::chardet-3.0.4-py36hc560c~ --> pkgs/main::chardet-4.0.0-py37h06a4308_1003
+  cryptography       conda-forge::cryptography-3.0-py36h8b~ --> pkgs/main::cryptography-3.4.7-py37hd23ed53_0
+  docutils           conda-forge::docutils-0.16-py36hc560c~ --> pkgs/main::docutils-0.17.1-py37h06a4308_1
+  entrypoints                         0.3-py36hc560c46_1001 --> 0.3-py37hc8dfbb8_1002
+  importlib-metadata                   1.7.0-py36hc560c46_0 --> 4.6.3-py37h89c1867_0
+  importlib_metadata                                1.7.0-0 --> 4.6.3-hd8ed1ab_0
+  ipykernel                            5.3.4-py36h0b673f9_0 --> 5.5.5-py37h085eea5_0
+  ipython            conda-forge::ipython-7.16.1-py36h0b67~ --> pkgs/main::ipython-7.26.0-py37hb070fc8_0
+  jedi                                0.17.2-py36hc560c46_0 --> 0.18.0-py37h89c1867_2
+  jupyter_core                         4.6.3-py36hc560c46_1 --> 4.7.1-py37h89c1867_0
+  kiwisolver                           1.2.0-py36h499bf3f_0 --> 1.3.1-py37h2527ec5_1
+  lz4-c                 conda-forge::lz4-c-1.9.2-he1b5a44_3 --> pkgs/main::lz4-c-1.9.3-h295c915_1
+  markupsafe         conda-forge::markupsafe-1.1.1-py36h97~ --> pkgs/main::markupsafe-2.0.1-py37h27cfd23_0
+  matplotlib-base                      3.3.1-py36h2451756_0 --> 3.3.1-py37hd478181_1
+  mistune                           0.8.4-py36h97a6639_1001 --> 0.8.4-py37h5e8e339_1004
+  nb_conda_kernels   pkgs/main::nb_conda_kernels-2.2.3-py3~ --> conda-forge::nb_conda_kernels-2.3.1-py37h89c1867_0
+  nbconvert                            5.6.1-py36hc560c46_1 --> 6.1.0-py37h89c1867_0
+  ncurses                                 6.1-hf484d3e_1002 --> 6.2-h58526e2_4
+  notebook           conda-forge/linux-64::notebook-6.1.3-~ --> conda-forge/noarch::notebook-6.4.2-pyha770c72_0
+  numpy                               1.19.1-py36he0f5f23_0 --> 1.21.1-py37h038b26d_0
+  openssl            conda-forge::openssl-1.1.1g-h516909a_1 --> pkgs/main::openssl-1.1.1k-h27cfd23_0
+  pandas                               1.0.5-py36h01e7d0c_0 --> 1.3.1-py37h219a48f_0
+  parso                                  0.7.1-pyh9f0ad1d_0 --> 0.8.2-pyhd8ed1ab_0
+  pickleshare                       0.7.5-py36hc560c46_1001 --> 0.7.5-py37hc8dfbb8_1002
+  pillow                               7.2.0-py36hfc7c323_1 --> 8.0.1-py37h718be6c_0
+  psutil             conda-forge::psutil-5.7.2-py36h97a663~ --> pkgs/main::psutil-5.8.0-py37h27cfd23_1
+  pynacl             pkgs/main::pynacl-1.4.0-py36h7b6447c_1 --> conda-forge::pynacl-1.4.0-py37h8f50634_2
+  pyrsistent                          0.16.0-py36h97a6639_0 --> 0.17.3-py37h5e8e339_2
+  pysocks                              1.7.1-py36hc560c46_1 --> 1.7.1-py37h89c1867_3
+  python                conda-forge::python-3.6.9-2_73_pypy --> pkgs/main::python-3.7.7-h191fe78_0_cpython
+  python_abi                              3.6-1_pypy36_pp73 --> 3.7-2_cp37m
+  pyyaml             conda-forge::pyyaml-5.3.1-py36h97a663~ --> pkgs/main::pyyaml-5.4.1-py37h27cfd23_1
+  pyzmq              pkgs/main::pyzmq-17.0.0-py36h14c3975_0 --> conda-forge::pyzmq-17.1.2-py37hae99301_0
+  requests                              2.24.0-pyh9f0ad1d_0 --> 2.26.0-pyhd8ed1ab_0
+  samtools                                  1.10-h9402c20_2 --> 1.10-h2e538c0_3
+  scipy              conda-forge::scipy-1.5.2-py36h832618f~ --> pkgs/main::scipy-1.6.2-py37hf56f3a7_1
+  setuptools         conda-forge::setuptools-49.6.0-py36hc~ --> pkgs/main::setuptools-52.0.0-py37h06a4308_0
+  snakemake          bioconda/linux-64::snakemake-3.13.3-p~ --> bioconda/noarch::snakemake-6.6.1-hdfd78af_0
+  statsmodels        pkgs/main::statsmodels-0.11.1-py36h7b~ --> conda-forge::statsmodels-0.12.2-py37h902c9e0_0
+  tbb                    conda-forge::tbb-2020.1-hc9558a2_0 --> pkgs/main::tbb-2020.3-hfd86e86_0
+  terminado                            0.8.3-py36hc560c46_1 --> 0.10.1-py37h89c1867_0
+  tornado                              6.0.4-py36h97a6639_1 --> 6.1-py37h5e8e339_1
+  traitlets          conda-forge/linux-64::traitlets-4.3.3~ --> pkgs/main/noarch::traitlets-5.0.5-pyhd3eb1b0_0
+  wrapt                               1.12.1-py36h97a6639_1 --> 1.12.1-py37h5e8e339_3
+  zstd                   conda-forge::zstd-1.4.5-h6597ccf_2 --> pkgs/main::zstd-1.4.9-haebb681_0
+
+The following packages will be SUPERSEDED by a higher-priority channel:
+
+  jsonschema         conda-forge::jsonschema-3.2.0-py36hc5~ --> pkgs/main::jsonschema-3.2.0-py37_1
+  pexpect            conda-forge::pexpect-4.8.0-py36hc560c~ --> pkgs/main::pexpect-4.8.0-py37_1
+  rpy2                   r::rpy2-2.9.4-py36mro351h6853232_0 --> pkgs/r::rpy2-2.9.4-py37mro351h6853232_0
+
+
+Proceed ([y]/n)? y
+
+
+Downloading and Extracting Packages
+atk-1.0-2.36.0       | 530 KB    | ################################################################################################################# | 100%
+pyasn1-modules-0.2.8 | 72 KB     | ################################################################################################################# | 100%
+wrapt-1.12.1         | 47 KB     | ################################################################################################################# | 100%
+brotlipy-0.7.0       | 320 KB    | ################################################################################################################# | 100%
+statsmodels-0.12.2   | 11.3 MB   | ################################################################################################################# | 100%
+kiwisolver-1.3.1     | 78 KB     | ################################################################################################################# | 100%
+aiohttp-3.7.4.post0  | 625 KB    | ################################################################################################################# | 100%
+pynacl-1.4.0         | 1.3 MB    | ################################################################################################################# | 100%
+botocore-1.21.17     | 4.8 MB    | ################################################################################################################# | 100%
+biopython-1.79       | 2.6 MB    | ################################################################################################################# | 100%
+scipy-1.6.2          | 15.4 MB   | ################################################################################################################# | 100%
+pytest-6.2.4         | 420 KB    | ################################################################################################################# | 100%
+google-crc32c-1.1.2  | 24 KB     | ################################################################################################################# | 100%
+notebook-6.4.2       | 6.2 MB    | ################################################################################################################# | 100%
+snakemake-6.6.1      | 7 KB      | ################################################################################################################# | 100%
+zstd-1.4.9           | 480 KB    | ################################################################################################################# | 100%
+rpy2-2.9.4           | 267 KB    | ################################################################################################################# | 100%
+chardet-4.0.0        | 195 KB    | ################################################################################################################# | 100%
+ghostscript-9.54.0   | 57.0 MB   | ################################################################################################################# | 100%
+entrypoints-0.3      | 13 KB     | ################################################################################################################# | 100%
+psutil-5.8.0         | 329 KB    | ################################################################################################################# | 100%
+rsa-4.7.2            | 28 KB     | ################################################################################################################# | 100%
+aioeasywebdav-2.4.0  | 18 KB     | ################################################################################################################# | 100%
+gdk-pixbuf-2.38.2    | 653 KB    | ################################################################################################################# | 100%
+parso-0.8.2          | 68 KB     | ################################################################################################################# | 100%
+setuptools-52.0.0    | 710 KB    | ################################################################################################################# | 100%
+jsonschema-3.2.0     | 91 KB     | ################################################################################################################# | 100%
+google-api-python-cl | 3.9 MB    | ################################################################################################################# | 100%
+gts-0.7.6            | 400 KB    | ################################################################################################################# | 100%
+nbconvert-6.1.0      | 548 KB    | ################################################################################################################# | 100%
+openjpeg-2.3.1       | 395 KB    | ################################################################################################################# | 100%
+libcroco-0.6.13      | 136 KB    | ################################################################################################################# | 100%
+protobuf-3.17.2      | 347 KB    | ################################################################################################################# | 100%
+matplotlib-base-3.3. | 6.7 MB    | ################################################################################################################# | 100%
+networkx-2.6.2       | 1.5 MB    | ################################################################################################################# | 100%
+pkg-config-0.29.2    | 120 KB    | ################################################################################################################# | 100%
+cryptography-3.4.7   | 904 KB    | ################################################################################################################# | 100%
+more-itertools-8.8.0 | 39 KB     | ################################################################################################################# | 100%
+numpy-1.21.1         | 6.1 MB    | ################################################################################################################# | 100%
+markupsafe-2.0.1     | 21 KB     | ################################################################################################################# | 100%
+py-1.10.0            | 76 KB     | ################################################################################################################# | 100%
+s3transfer-0.5.0     | 55 KB     | ################################################################################################################# | 100%
+python-3.7.7         | 45.1 MB   | ################################################################################################################# | 100%
+google-cloud-storage | 72 KB     | ################################################################################################################# | 100%
+imagemagick-7.0.9_1  | 2.5 MB    | ################################################################################################################# | 100%
+pyrsistent-0.17.3    | 89 KB     | ################################################################################################################# | 100%
+blas-1.1             | 1 KB      | ################################################################################################################# | 100%
+mistune-0.8.4        | 54 KB     | ################################################################################################################# | 100%
+ipykernel-5.5.5      | 167 KB    | ################################################################################################################# | 100%
+coincbc-2.10.5       | 7.9 MB    | ################################################################################################################# | 100%
+yarl-1.5.1           | 138 KB    | ################################################################################################################# | 100%
+argon2-cffi-20.1.0   | 47 KB     | ################################################################################################################# | 100%
+async-timeout-3.0.1  | 12 KB     | ################################################################################################################# | 100%
+jedi-0.18.0          | 923 KB    | ################################################################################################################# | 100%
+traitlets-5.0.5      | 81 KB     | ################################################################################################################# | 100%
+pexpect-4.8.0        | 77 KB     | ################################################################################################################# | 100%
+tabulate-0.8.9       | 40 KB     | ################################################################################################################# | 100%
+python_abi-3.7       | 4 KB      | ################################################################################################################# | 100%
+simplejson-3.17.3    | 98 KB     | ################################################################################################################# | 100%
+nest-asyncio-1.5.1   | 9 KB      | ################################################################################################################# | 100%
+filelock-3.0.12      | 10 KB     | ################################################################################################################# | 100%
+pickleshare-0.7.5    | 13 KB     | ################################################################################################################# | 100%
+google-cloud-core-1. | 26 KB     | ################################################################################################################# | 100%
+pysocks-1.7.1        | 27 KB     | ################################################################################################################# | 100%
+google-auth-1.28.0   | 72 KB     | ################################################################################################################# | 100%
+samtools-1.10        | 338 KB    | ################################################################################################################# | 100%
+multidict-5.1.0      | 66 KB     | ################################################################################################################# | 100%
+pluggy-0.13.1        | 29 KB     | ################################################################################################################# | 100%
+ipython-7.26.0       | 1005 KB   | ################################################################################################################# | 100%
+fftw-3.3.9           | 2.3 MB    | ################################################################################################################# | 100%
+pulp-2.4             | 130 KB    | ################################################################################################################# | 100%
+matplotlib-inline-0. | 11 KB     | ################################################################################################################# | 100%
+pygraphviz-1.7       | 125 KB    | ################################################################################################################# | 100%
+iniconfig-1.1.1      | 8 KB      | ################################################################################################################# | 100%
+librsvg-2.46.2       | 7.5 MB    | ################################################################################################################# | 100%
+graphviz-2.42.3      | 7.3 MB    | ################################################################################################################# | 100%
+pyzmq-17.1.2         | 1.0 MB    | ################################################################################################################# | 100%
+googleapis-common-pr | 124 KB    | ################################################################################################################# | 100%
+configargparse-1.5.2 | 32 KB     | ################################################################################################################# | 100%
+gtk2-2.24.32         | 7.3 MB    | ################################################################################################################# | 100%
+async_generator-1.10 | 39 KB     | ################################################################################################################# | 100%
+bcrypt-3.2.0         | 44 KB     | ################################################################################################################# | 100%
+libcrc32c-1.1.1      | 20 KB     | ################################################################################################################# | 100%
+importlib-metadata-4 | 31 KB     | ################################################################################################################# | 100%
+nb_conda_kernels-2.3 | 27 KB     | ################################################################################################################# | 100%
+jupyterlab_pygments- | 8 KB      | ################################################################################################################# | 100%
+tornado-6.1          | 646 KB    | ################################################################################################################# | 100%
+jupyter_core-4.7.1   | 72 KB     | ################################################################################################################# | 100%
+grpcio-1.33.2        | 1.8 MB    | ################################################################################################################# | 100%
+google-api-core-1.31 | 59 KB     | ################################################################################################################# | 100%
+pyyaml-5.4.1         | 168 KB    | ################################################################################################################# | 100%
+terminado-0.10.1     | 26 KB     | ################################################################################################################# | 100%
+pandas-1.3.1         | 12.7 MB   | ################################################################################################################# | 100%
+docutils-0.17.1      | 680 KB    | ################################################################################################################# | 100%
+connection_pool-0.0. | 8 KB      | ################################################################################################################# | 100%
+cffi-1.14.4          | 224 KB    | ################################################################################################################# | 100%
+libprotobuf-3.17.2   | 2.5 MB    | ################################################################################################################# | 100%
+smart_open-5.1.0     | 42 KB     | ################################################################################################################# | 100%
+boto3-1.18.17        | 70 KB     | ################################################################################################################# | 100%
+nbclient-0.5.3       | 67 KB     | ################################################################################################################# | 100%
+google-resumable-med | 41 KB     | ################################################################################################################# | 100%
+gobject-introspectio | 1.4 MB    | ################################################################################################################# | 100%
+python-irodsclient-1 | 104 KB    | ################################################################################################################# | 100%
+snakemake-minimal-6. | 206 KB    | ################################################################################################################# | 100%
+datrie-0.8.2         | 152 KB    | ################################################################################################################# | 100%
+importlib_metadata-4 | 3 KB      | ################################################################################################################# | 100%
+bowtie2-2.4.4        | 15.1 MB   | ################################################################################################################# | 100%
+Preparing transaction: done
+Verifying transaction: done
+Executing transaction: - Disabling nb_conda_kernels...
+Status: disabled
+                                                                                                                                                          - Enabling nb_conda_kernels...
+CONDA_PREFIX: /home/lkemp/anaconda3/envs/seattle-flu
+Status: enabled
+```
+
+Check the current version of Snakemake now:
+
+```bash
+snakemake --version
+```
+
+My output:
+
+```bash
+6.6.1
+```
+
+Oke thats better, try run again
+
+Dryrun
+
+```bash
+cd /NGS/scratch/KSCBIOM/HumanGenomics/testing_seattleflu_assembly/non_lane_merged_test/assembly/
+snakemake --dryrun --configfile config/config-flu-only.json -k
+```
+
+Sweet that's good it got past that error...and to a new error...
+
+```bash
+KeyError in line 547 of /NGS/scratch/KSCBIOM/HumanGenomics/testing_seattleflu_assembly/non_lane_merged_test/assembly/Snakefile:
+'ID3C_URL'
+  File "/NGS/scratch/KSCBIOM/HumanGenomics/testing_seattleflu_assembly/non_lane_merged_test/assembly/Snakefile", line 547, in <module>
+  File "/home/lkemp/anaconda3/envs/seattle-flu/lib/python3.7/os.py", line 681, in __getitem__
+```
+
+Erroring out at [line 547](https://github.com/seattleflu/assembly/blob/v1.0/Snakefile#L547)
 
 ## Test the pipeline on lane merged data
 
@@ -570,13 +1101,141 @@ conda activate seattle-flu
 
 ### Setup/rename FASTQ files
 
-### Create NWGC ID/SFS UUID key-value pair file
+Make a test fastq dir where I can change the name of the fastq files for testing, I'll just work with one sample for now
+
+```bash
+cd /NGS/scratch/KSCBIOM/HumanGenomics/testing_seattleflu_assembly/non_lane_merged_test/
+
+mkdir fastq_test
+
+cp ./fastq/19CF0956_S80_L00*_R*_001.fastq.gz ./fastq_test/
+```
+
+Rename the sample to match their example of this mysterious NWGC sample ID
+
+```bash
+cd fastq_test
+
+for file in ./fastq_test/19CF0956_S80_L00*_R*_001.fastq.gz ; do mv $file ${file//19CF0956/318375} ; done
+```
 
 ### Configuration
 
 My config file at `config/config-flu-only.json`:
 
 ```json
+{
+    "fastq_directory" :
+      "/NGS/scratch/KSCBIOM/HumanGenomics/testing_seattleflu_assembly/non_lane_merged_test/fastq_test/",
+    "ignored_samples":
+      {
+        "Undetermined": {}
+      },
+    "sample_reference_pairs":
+      {
+        "318571": ["h1n1pdm_Michigan_45_2015"],
+        "318572": ["h1n1pdm_Michigan_45_2015"],
+        "318573": ["h3n2_Texas_50_2012"],
+        "318574": ["h3n2_Texas_50_2012"],
+        "318575": ["h1n1pdm_Michigan_45_2015"],
+        "318576": ["h3n2_Texas_50_2012"],
+        "318578": ["h1n1pdm_Michigan_45_2015"],
+        "318579": ["h3n2_Texas_50_2012"],
+        "318582": ["h3n2_Texas_50_2012"],
+        "318583": ["h3n2_Texas_50_2012"],
+        "318584": ["h1n1pdm_Michigan_45_2015"],
+        "318586": ["h3n2_Texas_50_2012"],
+        "318588": ["h3n2_Texas_50_2012"],
+        "318592": ["h1n1pdm_Michigan_45_2015"],
+        "318594": ["h3n2_Texas_50_2012"],
+        "318595": ["h1n1pdm_Michigan_45_2015"],
+        "318596": ["h3n2_Texas_50_2012"],
+        "318601": ["h3n2_Texas_50_2012"],
+        "318602": ["h1n1pdm_Michigan_45_2015"],
+        "318604": ["h1n1pdm_Michigan_45_2015"],
+        "318605": ["h3n2_Texas_50_2012"],
+        "318606": ["h3n2_Texas_50_2012"],
+        "318608": ["h3n2_Texas_50_2012"],
+        "318609": ["h3n2_Texas_50_2012", "h1n1pdm_Michigan_45_2015"],
+        "318610": ["h3n2_Texas_50_2012"],
+        "318612": ["h3n2_Texas_50_2012"],
+        "318613": ["h3n2_Texas_50_2012"],
+        "318614": ["h1n1pdm_Michigan_45_2015"],
+        "318616": ["h3n2_Texas_50_2012"],
+        "318617": ["h3n2_Texas_50_2012"],
+        "318618": ["h3n2_Texas_50_2012"],
+        "318619": ["h1n1pdm_Michigan_45_2015"],
+        "318620": ["h1n1pdm_Michigan_45_2015"],
+        "318622": ["h1n1pdm_Michigan_45_2015"],
+        "318623": ["h3n2_Texas_50_2012"],
+        "318625": ["h3n2_Texas_50_2012"],
+        "318626": ["h3n2_Texas_50_2012"],
+        "318627": ["h3n2_Texas_50_2012"],
+        "318628": ["h1n1pdm_Michigan_45_2015"],
+        "318630": ["h1n1pdm_Michigan_45_2015"],
+        "318631": ["h1n1pdm_Michigan_45_2015"],
+        "318632": ["h1n1pdm_Michigan_45_2015"],
+        "318634": ["h1n1pdm_Michigan_45_2015"],
+        "318637": ["h3n2_Texas_50_2012"],
+        "318638": ["h3n2_Texas_50_2012"],
+        "318640": ["h3n2_Texas_50_2012"],
+        "318642": ["h3n2_Texas_50_2012"],
+        "318643": ["h3n2_Texas_50_2012"],
+        "318646": ["h3n2_Texas_50_2012"],
+        "318648": ["h3n2_Texas_50_2012"],
+        "318650": ["h3n2_Texas_50_2012"],
+        "318651": ["h3n2_Texas_50_2012"],
+        "318652": ["h3n2_Texas_50_2012"],
+        "318653": ["h1n1pdm_Michigan_45_2015"],
+        "318654": ["h1n1pdm_Michigan_45_2015"],
+        "318655": ["h1n1pdm_Michigan_45_2015"],
+        "318659": ["h3n2_Texas_50_2012"],
+        "318661": ["h3n2_Texas_50_2012"],
+        "318662": ["h3n2_Texas_50_2012"],
+        "318665": ["h1n1pdm_Michigan_45_2015"]
+      },
+    "barcode_match" : {
+        "mapper_filepath": "~/Downloads/sample-target-match.xlsx",
+        "nwgc_column": "sample",
+        "sfs_column": "uuid",
+        "key_value_filepath": "test_data/key_value.txt"
+    },
+    "raw_read_length": 150,
+    "reference_viruses" :
+      {
+        "h1n1pdm_Michigan_45_2015" : {},
+        "vic_Brisbane_60_2008" : {},
+        "h3n2_Texas_50_2012": {},
+        "yam_Wisconsin_01_2010": {}
+      },
+    "params" :
+      {
+        "trimmomatic" :
+          {
+            "paired_end" : "PE",
+            "adapters" : "illumina-adapters.fasta",
+            "illumina_clip" : "1:30:10",
+            "window_size" : "5",
+            "trim_qscore" : "30",
+            "minimum_length" : "50"
+          },
+        "bowtie2" :
+          {
+            "threads" : "4",
+            "all" : "-a"
+          },
+        "mpileup" :
+          {
+            "depth" : "1000000"
+          },
+        "varscan" :
+          {
+            "min_cov" : "20",
+            "snp_qual_threshold" : "30",
+            "snp_frequency" : "0.50"
+          }
+      }
+}
 
 ```
 
