@@ -20,6 +20,7 @@ Helping a colleague reviewing/testing the [seattleflu/assembly pipeline](https:/
     - [Configuration](#configuration-1)
     - [Pipeline development to accept lane merged data](#pipeline-development-to-accept-lane-merged-data)
     - [Running the pipeline](#running-the-pipeline)
+  - [Pipeline development suggestions](#pipeline-development-suggestions)
 
 ## What I haven't checked
 
@@ -40,15 +41,19 @@ Good signs:
 - Comes with a [bunch of reference genomes](https://github.com/seattleflu/assembly/tree/master/references) for alignment which is nice (so user doesn't need to find and manually download them)
 - They're not currently really writing log files which can really do you're head in when debugging the pipeline since you're not capturing any errors/outputs the software in the pipeline is throwing out
 
-The pipeline expects 8 total FASTQ files for each individual sample, with Read 1 (R1) and Read 2 (R2) from 4 different lanes. Checked with Una and the data to be fed into the pipeline is going to be already pooled/lane-merged ("the lanes are merged during basecalling to make things easier down the line")
+Bad signs:
 
-Setup dirs for tesing pipelines
+- The software versions in the [conda environment](https://github.com/seattleflu/assembly/blob/v1.0/envs/seattle-flu-environment.yaml) for the pipeline is not specified. This means it would be hard for someone else to reproduce the analyses you've done with this pipeline unless you give them your specific conda env setup (which probably wouldn't happen). These software should really be pinned down to specific versions at a minimum (even better having the software containerised), but that would be a fairly straightforward pipeline development
+
+## Test the pipeline on non-lane merged data
+
+The pipeline expects 8 total FASTQ files for each individual sample, with Read 1 (R1) and Read 2 (R2) from 4 different lanes. Checked with Una and the data to be fed into the pipeline is going to be already pooled/lane-merged ("the lanes are merged during basecalling to make things easier down the line"). I'm going to get the pipeline working on non lane merged data first to debug any issues before confusing it with development.
+
+Setup dirs for testing pipelines
 
 ```bash
 mkdir /NGS/scratch/KSCBIOM/HumanGenomics/testing_seattleflu_assembly/{lane_merged_test,non_lane_merged_test}
 ```
-
-## Test the pipeline on non-lane merged data
 
 ### Get data
 
@@ -555,8 +560,6 @@ My output:
 ```bash
 3.13.3
 ```
-
-*That made me realise it not the best idea for them to not specify software versions in their [conda environment](https://github.com/seattleflu/assembly/blob/v1.0/envs/seattle-flu-environment.yaml) for the pipeline...it would be hard for someone else to reproduce the analyses you've done with this pipeline unless you give them your specific conda env setup (which probably wouldn't happen). These software should really be pinned down to specific versions at a minimum (even better having the software containerised), but that would be a fairly straightforward pipeline development*
 
 Try updating the Snakemake version
 
@@ -1412,3 +1415,8 @@ Full run
 ```bash
 snakemake --configfile config/config-flu-only.json -k
 ```
+
+## Pipeline development suggestions
+
+- Specify specific verisons of software in pipeline conda env
+- Allow option to analyse lane-merged or non lane-merged data
