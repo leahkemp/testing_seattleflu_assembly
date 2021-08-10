@@ -9,18 +9,17 @@ Helping a colleague reviewing/testing the [seattleflu/assembly pipeline](https:/
     - [Get data](#get-data)
     - [Get pipeline](#get-pipeline)
     - [Create conda environment to run pipeline in](#create-conda-environment-to-run-pipeline-in)
-    - [Setup/rename FASTQ files](#setuprename-fastq-files)
-    - [Create NWGC ID/SFS UUID key-value pair file](#create-nwgc-idsfs-uuid-key-value-pair-file)
     - [Configuration](#configuration)
-    - [Running the pipeline](#running-the-pipeline)
+    - [Run a dry run of the pipeline](#run-a-dry-run-of-the-pipeline)
+    - [Run a full run of the pipeline](#run-a-full-run-of-the-pipeline)
   - [Test the pipeline on lane merged data](#test-the-pipeline-on-lane-merged-data)
     - [Get data](#get-data-1)
     - [Get pipeline](#get-pipeline-1)
     - [Create conda environment to run pipeline in](#create-conda-environment-to-run-pipeline-in-1)
-    - [Setup/rename FASTQ files](#setuprename-fastq-files-1)
+    - [Setup/rename FASTQ files](#setuprename-fastq-files)
     - [Configuration](#configuration-1)
     - [Pipeline development to accept lane merged data](#pipeline-development-to-accept-lane-merged-data)
-    - [Running the pipeline](#running-the-pipeline-1)
+    - [Running the pipeline](#running-the-pipeline)
 
 ## What I haven't checked
 
@@ -398,11 +397,6 @@ Activate conda environment
 conda activate seattle-flu
 ```
 
-### Setup/rename FASTQ files
-
-
-### Create NWGC ID/SFS UUID key-value pair file
-
 ### Configuration
 
 My config file at `config/config-flu-only.json`:
@@ -522,19 +516,13 @@ My config file at `config/config-flu-only.json`:
 }
 ```
 
-### Running the pipeline
+### Run a dry run of the pipeline
 
 Dryrun
 
 ```bash
 cd /NGS/scratch/KSCBIOM/HumanGenomics/testing_seattleflu_assembly/non_lane_merged_test/assembly/
 snakemake --dryrun --configfile config/config-flu-only.json -k
-```
-
-Full run
-
-```bash
-snakemake --configfile config/config-flu-only.json -k
 ```
 
 Currently keeps erroring out with very little info as to why
@@ -1063,6 +1051,61 @@ KeyError in line 547 of /NGS/scratch/KSCBIOM/HumanGenomics/testing_seattleflu_as
 ```
 
 Erroring out at [line 547](https://github.com/seattleflu/assembly/blob/v1.0/Snakefile#L547)
+
+So I just commented that whole rule out ([post_masked_consensus_and_summary_stats_to_id3c](https://github.com/seattleflu/assembly/blob/v1.0/Snakefile#L541)), would we need it anyway? If it is wanted, we'd have to figure out that error.
+
+With that rule commented out, we've got a successful dryrun!
+
+Part of my output:
+
+```bash
+Building DAG of jobs...
+Job stats:
+job                       count    min threads    max threads
+----------------------  -------  -------------  -------------
+aggregate                    16              1              1
+all                           1              1              1
+bamstats                     16              1              1
+index_reference_genome        4              1              1
+map                          16              1              1
+mapped_reads                 16              1              1
+merge_lanes                   4              1              1
+post_trim_fastqc              4              1              1
+sort                         16              1              1
+trim_fastqs                   4              1              1
+total                        97              1              1
+```
+
+### Run a full run of the pipeline
+
+Cluster config file at `./config/cluster.json` looks pretty setup already, but I just took out the disk settings, each rule will be using one core apart from the mapping rule where it'll bump up to 4 cores per "sample" (and more memory):
+
+```bash
+{
+    "__default__": {
+        "time" : "00:15:00",
+        "cores" : 1,
+        "memory": "512",
+        "name": "{rule}.{wildcards}",
+        "stdout": "log/cluster/{rule}.{wildcards}.%j.out",
+        "stderr": "log/cluster/{rule}.{wildcards}.%j.err"
+    },
+    "trim_fastqs": {
+        "time" : "00:05:00"
+    },
+    "map": {
+        "time": "6:00:00",
+        "memory": "16384",
+        "cores": 4
+    }
+}
+```
+
+Full run (deployed to slurm on the ESR cluster) with a max of 20 cores (`-j 20`)
+
+```bash
+snakemake -w 60 --configfile config/config-flu-only.json --cluster-config config/cluster.json --cluster "sbatch -A lkemp -p prod --nodes=1 --tasks=1 --mem={cluster.memory} --cpus-per-task={cluster.cores} --time={cluster.time} -o all_output.out" -j 20 -k
+```
 
 ## Test the pipeline on lane merged data
 
