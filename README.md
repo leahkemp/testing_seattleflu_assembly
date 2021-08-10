@@ -1107,6 +1107,119 @@ Full run (deployed to slurm on the ESR cluster) with a max of 20 cores (`-j 20`)
 snakemake -w 60 --configfile config/config-flu-only.json --cluster-config config/cluster.json --cluster "sbatch -A lkemp -p prod --nodes=1 --tasks=1 --mem={cluster.memory} --cpus-per-task={cluster.cores} --time={cluster.time} -o all_output.out" -j 20 -k
 ```
 
+Oke, looks like she mapped to the four critters specified in `/references/target_reference_map.json` which is good (although dosesn't seem like it worked on sample 19CF0981 and 19CF0981, but the could be because it's not that critter)
+
+Errored out at [line 608](https://github.com/seattleflu/assembly/blob/v1.0/Snakefile#L608) with:
+
+```bash
+InputFunctionException in line 608 of /NGS/scratch/KSCBIOM/HumanGenomics/testing_seattleflu_assembly/non_lane_merged_test/assembly/Snakefile:
+Error:
+  AttributeError: 'Rules' object has no attribute 'post_masked_consensus_and_summary_stats_to_id3c'
+Wildcards:
+  reference=vic_Brisbane_60_2008
+  sample=19CF0981
+Traceback:
+  File "/NGS/scratch/KSCBIOM/HumanGenomics/testing_seattleflu_assembly/non_lane_merged_test/assembly/Snakefile", line 110, in aggregate_input
+```
+
+Probs because I commented out that [post_masked_consensus_and_summary_stats_to_id3c](https://github.com/seattleflu/assembly/blob/v1.0/Snakefile#L541) rule and this [agregate](https://github.com/seattleflu/assembly/blob/v1.0/Snakefile#L608) rule is looking for a file it would have output
+
+The function that defines the input for that [agregate](https://github.com/seattleflu/assembly/blob/v1.0/Snakefile#L608) rule is defined by the [aggregate_input function](https://github.com/seattleflu/assembly/blob/v1.0/Snakefile#L96) on line 96, I modified it to:
+
+```bash
+def aggregate_input(wildcards):
+    """
+    Returns input for rule aggregate based on output from checkpoint align_rate.
+    Set minimum align rate in config under "min_align_rate".
+    """
+    with open(checkpoints.mapped_reads.get(sample=wildcards.sample, reference=wildcards.reference).output[0]) as f:
+        summary = json.load(f)
+        all_segments_aligned = summary["all_segments_aligned"]
+        min_reads = summary["minimum_reads_required"]
+        mapped = summary["mapped_reads"]
+
+        if not all_segments_aligned or mapped <= min_reads:
+            return rules.not_mapped.output.not_mapped
+        else:
+            return rules.not_mapped.output.not_mapped
+```
+
+Neato, that got the whole pipeline to run through
+
+Output files we get:
+
+```bash
+summary/aggregate:
+total 128K
+drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 120 Aug 10 16:51 h1n1pdm_Michigan_45_2015
+drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 120 Aug 10 16:54 h3n2_Texas_50_2012
+drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 120 Aug 10 16:54 vic_Brisbane_60_2008
+drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 120 Aug 10 16:54 yam_Wisconsin_01_2010
+
+summary/bamstats:
+total 128K
+drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 180 Aug 10 16:39 h1n1pdm_Michigan_45_2015
+drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 180 Aug 10 16:51 h3n2_Texas_50_2012
+drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 180 Aug 10 16:51 vic_Brisbane_60_2008
+drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 180 Aug 10 16:51 yam_Wisconsin_01_2010
+
+summary/bowtie2:
+total 128K
+drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 120 Aug 10 16:38 h1n1pdm_Michigan_45_2015
+drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 120 Aug 10 16:38 h3n2_Texas_50_2012
+drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 120 Aug 10 16:38 vic_Brisbane_60_2008
+drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 120 Aug 10 16:38 yam_Wisconsin_01_2010
+
+summary/checkpoint:
+total 128K
+drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 124 Aug 10 16:39 h1n1pdm_Michigan_45_2015
+drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 124 Aug 10 16:52 h3n2_Texas_50_2012
+drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 124 Aug 10 16:52 vic_Brisbane_60_2008
+drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 124 Aug 10 16:52 yam_Wisconsin_01_2010
+
+summary/not_mapped:
+total 128K
+drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 120 Aug 10 16:51 h1n1pdm_Michigan_45_2015
+drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 120 Aug 10 16:53 h3n2_Texas_50_2012
+drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 120 Aug 10 16:53 vic_Brisbane_60_2008
+drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 120 Aug 10 16:53 yam_Wisconsin_01_2010
+
+summary/post_trim_fastqc:
+total 19M
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 243K Aug 10 16:39 19CF0956.trimmed_1P_fastqc.html
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 323K Aug 10 16:39 19CF0956.trimmed_1P_fastqc.zip
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 243K Aug 10 16:39 19CF0956.trimmed_1U_fastqc.html
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 325K Aug 10 16:39 19CF0956.trimmed_1U_fastqc.zip
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 248K Aug 10 16:39 19CF0956.trimmed_2P_fastqc.html
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 330K Aug 10 16:39 19CF0956.trimmed_2P_fastqc.zip
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 243K Aug 10 16:39 19CF0956.trimmed_2U_fastqc.html
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 321K Aug 10 16:39 19CF0956.trimmed_2U_fastqc.zip
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 244K Aug 10 16:39 19CF0957.trimmed_1P_fastqc.html
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 323K Aug 10 16:39 19CF0957.trimmed_1P_fastqc.zip
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 249K Aug 10 16:39 19CF0957.trimmed_1U_fastqc.html
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 332K Aug 10 16:39 19CF0957.trimmed_1U_fastqc.zip
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 254K Aug 10 16:39 19CF0957.trimmed_2P_fastqc.html
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 341K Aug 10 16:39 19CF0957.trimmed_2P_fastqc.zip
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 252K Aug 10 16:39 19CF0957.trimmed_2U_fastqc.html
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 337K Aug 10 16:39 19CF0957.trimmed_2U_fastqc.zip
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 274K Aug 10 16:39 19CF0981.trimmed_1P_fastqc.html
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 359K Aug 10 16:39 19CF0981.trimmed_1P_fastqc.zip
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 280K Aug 10 16:39 19CF0981.trimmed_1U_fastqc.html
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 370K Aug 10 16:39 19CF0981.trimmed_1U_fastqc.zip
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 275K Aug 10 16:39 19CF0981.trimmed_2P_fastqc.html
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 361K Aug 10 16:39 19CF0981.trimmed_2P_fastqc.zip
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 278K Aug 10 16:39 19CF0981.trimmed_2U_fastqc.html
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 367K Aug 10 16:39 19CF0981.trimmed_2U_fastqc.zip
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 250K Aug 10 16:39 19CF1345.trimmed_1P_fastqc.html
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 333K Aug 10 16:39 19CF1345.trimmed_1P_fastqc.zip
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 250K Aug 10 16:39 19CF1345.trimmed_1U_fastqc.html
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 333K Aug 10 16:39 19CF1345.trimmed_1U_fastqc.zip
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 258K Aug 10 16:39 19CF1345.trimmed_2P_fastqc.html
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 344K Aug 10 16:39 19CF1345.trimmed_2P_fastqc.zip
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 259K Aug 10 16:39 19CF1345.trimmed_2U_fastqc.html
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 350K Aug 10 16:39 19CF1345.trimmed_2U_fastqc.zip
+```
+
 ## Test the pipeline on lane merged data
 
 ### Get data
