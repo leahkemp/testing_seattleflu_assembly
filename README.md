@@ -21,6 +21,7 @@ Helping a colleague reviewing/testing the [seattleflu/assembly pipeline](https:/
     - [Pipeline development to accept lane merged data](#pipeline-development-to-accept-lane-merged-data)
     - [Running the pipeline](#running-the-pipeline)
   - [Pipeline development suggestions](#pipeline-development-suggestions)
+  - [Version of the pipline that takes pooled fastq files as inputs](#version-of-the-pipline-that-takes-pooled-fastq-files-as-inputs)
 
 ## What I haven't checked
 
@@ -1518,3 +1519,7 @@ total 18736
 
 - Specify specific verisons of software in pipeline conda env
 - Write logs to file
+
+## Version of the pipline that takes pooled fastq files as inputs
+
+https://github.com/leahkemp/assembly/tree/pooled_input_fastq
