@@ -30,6 +30,7 @@ Helping a colleague reviewing/testing the [seattleflu/assembly pipeline](https:/
 
 Good signs:
 
+- In a workflow language, good for portability, reproducibility, scalability
 - Has a [separate config file for the pipeline](https://github.com/seattleflu/assembly/blob/master/config/config.json) (and a few already configured config files for ["all refs"](https://github.com/seattleflu/assembly/blob/master/config/config-all-refs.json) and ["flu only"](https://github.com/seattleflu/assembly/blob/master/config/config-flu-only.json))
 - [Has a configuration file for running on a HPC](https://github.com/seattleflu/assembly/blob/master/config/cluster.json) - so should be able to be run on ESR's production network
 - It uses [trimmomatic](http://www.usadellab.org/cms/?page=trimmomatic) for trimming and [bowtie2](http://bowtie-bio.sourceforge.net/bowtie2/index.shtml) for alignment which are pretty standard choices in tools
@@ -76,6 +77,7 @@ Get pipeline
 git clone https://github.com/seattleflu/assembly.git
 
 # Checkout a specific release of the pipeline so I'm not on the buggy dev end of the repo
+cd assembly
 git checkout v1.0
 ```
 
@@ -1245,9 +1247,16 @@ cp /NGS/active/VIR/FLUB/run_links/19CF1345_S81_R*_001.fastq.gz ./fastq
 I forken the pipeline for pipeline development purposes
 
 ```bash
-cd /home/lkemp/testing_seattleflu_assembly/
-
 git clone https://github.com/leahkemp/assembly.git
+
+cd assembly
+git checkout v1.0
+```
+
+Copy the Snakefile I edited in the non lane merged test
+
+```bash
+cp ../../non_lane_merged_test/assembly/Snakefile .
 ```
 
 ### Create conda environment to run pipeline in
@@ -1260,22 +1269,36 @@ conda activate seattle-flu
 
 ### Setup/rename FASTQ files
 
-Make a test fastq dir where I can change the name of the fastq files for testing, I'll just work with one sample for now
+Looks the the file names after merging (in the non lane merged test) are in the format of 19CF0956_R1.fastq.gz, since I'm going to take out this merging step, I'll format the names of my data to match this format
 
 ```bash
-cd /NGS/scratch/KSCBIOM/HumanGenomics/testing_seattleflu_assembly/non_lane_merged_test/
+cd /NGS/scratch/KSCBIOM/HumanGenomics/testing_seattleflu_assembly/lane_merged_test/
+for file in ./fastq/19CF*_S80_R*_001.fastq.gz ; do mv $file ${file//_S80/} ; done
+for file in ./fastq/19CF*_S75_R*_001.fastq.gz ; do mv $file ${file//_S75/} ; done
+for file in ./fastq/19CF*_S86_R*_001.fastq.gz ; do mv $file ${file//_S86/} ; done
+for file in ./fastq/19CF*_S81_R*_001.fastq.gz ; do mv $file ${file//_S81/} ; done
 
-mkdir fastq_test
-
-cp ./fastq/19CF0956_S80_L00*_R*_001.fastq.gz ./fastq_test/
+for file in ./fastq/19CF*_R*_001.fastq.gz ; do mv $file ${file//_001/} ; done
 ```
 
-Rename the sample to match their example of this mysterious NWGC sample ID
+Input files
 
 ```bash
-cd fastq_test
+ls -lh ./fastq/
+```
 
-for file in ./fastq_test/19CF0956_S80_L00*_R*_001.fastq.gz ; do mv $file ${file//19CF0956/318375} ; done
+My output:
+
+```bash
+total 952M
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 109M Aug  9 13:21 19CF0956_R1.fastq.gz
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 112M Aug  9 13:21 19CF0956_R2.fastq.gz
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM  88M Aug  9 13:21 19CF0957_R1.fastq.gz
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM  90M Aug  9 13:21 19CF0957_R2.fastq.gz
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM  87M Aug  9 13:21 19CF0981_R1.fastq.gz
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM  90M Aug  9 13:21 19CF0981_R2.fastq.gz
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM  68M Aug  9 13:22 19CF1345_R1.fastq.gz
+-rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM  70M Aug  9 13:22 19CF1345_R2.fastq.gz
 ```
 
 ### Configuration
@@ -1285,7 +1308,7 @@ My config file at `config/config-flu-only.json`:
 ```json
 {
     "fastq_directory" :
-      "/NGS/scratch/KSCBIOM/HumanGenomics/testing_seattleflu_assembly/non_lane_merged_test/fastq_test/",
+      "/NGS/scratch/KSCBIOM/HumanGenomics/testing_seattleflu_assembly/non_lane_merged_test/fastq/",
     "ignored_samples":
       {
         "Undetermined": {}
@@ -1400,23 +1423,24 @@ My config file at `config/config-flu-only.json`:
 
 ### Pipeline development to accept lane merged data
 
-I found the [rule where the lanes are merged in the pipeline](https://github.com/leahkemp/assembly/blob/master/Snakefile-base#L88) so I'll see if I can "turn off" the merging step so we can make the pipeline accept our pooled/lane-merged data, first I'll test on non-lane merged data to make sure the pipeline works before developing it to accept lane-merged data
+This is the [rule where the lanes are merged in the pipeline](https://github.com/leahkemp/assembly/blob/v1.0/Snakefile#L146) so I'll see if I can "turn off" the merging step so we can make the pipeline accept our pooled/lane-merged data
 
 ### Running the pipeline
 
 Dryrun
 
 ```bash
+cd assembly
 snakemake --dryrun --configfile config/config-flu-only.json -k
 ```
 
-Full run
+Full run (deployed to slurm on the ESR cluster) with a max of 20 cores (`-j 20`)
 
 ```bash
-snakemake --configfile config/config-flu-only.json -k
+snakemake -w 60 --configfile config/config-flu-only.json --cluster-config config/cluster.json --cluster "sbatch -A lkemp -p prod --nodes=1 --tasks=1 --mem={cluster.memory} --cpus-per-task={cluster.cores} --time={cluster.time} -o all_output.out" -j 20 -k
 ```
 
 ## Pipeline development suggestions
 
 - Specify specific verisons of software in pipeline conda env
-- Allow option to analyse lane-merged or non lane-merged data
+- Write logs to file
