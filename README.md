@@ -1440,6 +1440,80 @@ Full run (deployed to slurm on the ESR cluster) with a max of 20 cores (`-j 20`)
 snakemake -w 60 --configfile config/config-flu-only.json --cluster-config config/cluster.json --cluster "sbatch -A lkemp -p prod --nodes=1 --tasks=1 --mem={cluster.memory} --cpus-per-task={cluster.cores} --time={cluster.time} -o all_output.out" -j 20 -k
 ```
 
+Output files we get:
+
+```bash
+./lane_merged_test/assembly/summary/aggregate:
+total 128
+32 drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 120 Aug 12 16:28 h1n1pdm_Michigan_45_2015
+32 drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 120 Aug 12 16:29 h3n2_Texas_50_2012
+32 drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 120 Aug 12 16:31 vic_Brisbane_60_2008
+32 drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 120 Aug 12 16:30 yam_Wisconsin_01_2010
+
+./lane_merged_test/assembly/summary/bamstats:
+total 128
+32 drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 180 Aug 12 16:25 h1n1pdm_Michigan_45_2015
+32 drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 180 Aug 12 16:26 h3n2_Texas_50_2012
+32 drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 180 Aug 12 16:28 vic_Brisbane_60_2008
+32 drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 180 Aug 12 16:27 yam_Wisconsin_01_2010
+
+./lane_merged_test/assembly/summary/bowtie2:
+total 128
+32 drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 120 Aug 12 16:23 h1n1pdm_Michigan_45_2015
+32 drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 120 Aug 12 16:23 h3n2_Texas_50_2012
+32 drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 120 Aug 12 16:23 vic_Brisbane_60_2008
+32 drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 120 Aug 12 16:23 yam_Wisconsin_01_2010
+
+./lane_merged_test/assembly/summary/checkpoint:
+total 128
+32 drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 124 Aug 12 16:26 h1n1pdm_Michigan_45_2015
+32 drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 124 Aug 12 16:27 h3n2_Texas_50_2012
+32 drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 124 Aug 12 16:29 vic_Brisbane_60_2008
+32 drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 124 Aug 12 16:28 yam_Wisconsin_01_2010
+
+./lane_merged_test/assembly/summary/not_mapped:
+total 128
+32 drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 120 Aug 12 16:27 h1n1pdm_Michigan_45_2015
+32 drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 120 Aug 12 16:28 h3n2_Texas_50_2012
+32 drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 120 Aug 12 16:30 vic_Brisbane_60_2008
+32 drwxrwsr-x 2 lkemp SEC_lab_KSCBIOM 120 Aug 12 16:29 yam_Wisconsin_01_2010
+
+./lane_merged_test/assembly/summary/post_trim_fastqc:
+total 18736
+528 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 248166 Aug 12 16:24 19CF0956.trimmed_1P_fastqc.html
+608 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 331363 Aug 12 16:24 19CF0956.trimmed_1P_fastqc.zip
+536 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 261053 Aug 12 16:24 19CF0956.trimmed_1U_fastqc.html
+624 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 349889 Aug 12 16:24 19CF0956.trimmed_1U_fastqc.zip
+528 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 249800 Aug 12 16:24 19CF0956.trimmed_2P_fastqc.html
+608 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 333253 Aug 12 16:24 19CF0956.trimmed_2P_fastqc.zip
+544 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 262833 Aug 12 16:24 19CF0956.trimmed_2U_fastqc.html
+632 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 352720 Aug 12 16:24 19CF0956.trimmed_2U_fastqc.zip
+528 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 253900 Aug 12 16:24 19CF0957.trimmed_1P_fastqc.html
+616 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 339634 Aug 12 16:24 19CF0957.trimmed_1P_fastqc.zip
+544 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 263640 Aug 12 16:24 19CF0957.trimmed_1U_fastqc.html
+632 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 354045 Aug 12 16:24 19CF0957.trimmed_1U_fastqc.zip
+536 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 256286 Aug 12 16:24 19CF0957.trimmed_2P_fastqc.html
+616 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 342587 Aug 12 16:24 19CF0957.trimmed_2P_fastqc.zip
+544 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 262159 Aug 12 16:24 19CF0957.trimmed_2U_fastqc.html
+624 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 347098 Aug 12 16:24 19CF0957.trimmed_2U_fastqc.zip
+560 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 280508 Aug 12 16:24 19CF0981.trimmed_1P_fastqc.html
+640 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 367310 Aug 12 16:24 19CF0981.trimmed_1P_fastqc.zip
+560 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 286046 Aug 12 16:24 19CF0981.trimmed_1U_fastqc.html
+656 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 378341 Aug 12 16:24 19CF0981.trimmed_1U_fastqc.zip
+560 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 281138 Aug 12 16:24 19CF0981.trimmed_2P_fastqc.html
+648 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 369473 Aug 12 16:24 19CF0981.trimmed_2P_fastqc.zip
+560 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 284486 Aug 12 16:24 19CF0981.trimmed_2U_fastqc.html
+648 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 375452 Aug 12 16:24 19CF0981.trimmed_2U_fastqc.zip
+528 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 250331 Aug 12 16:24 19CF1345.trimmed_1P_fastqc.html
+608 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 333006 Aug 12 16:24 19CF1345.trimmed_1P_fastqc.zip
+544 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 269842 Aug 12 16:24 19CF1345.trimmed_1U_fastqc.html
+640 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 361793 Aug 12 16:24 19CF1345.trimmed_1U_fastqc.zip
+536 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 258498 Aug 12 16:24 19CF1345.trimmed_2P_fastqc.html
+624 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 345143 Aug 12 16:24 19CF1345.trimmed_2P_fastqc.zip
+544 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 267252 Aug 12 16:24 19CF1345.trimmed_2U_fastqc.html
+632 -rw-rw-r-- 1 lkemp SEC_lab_KSCBIOM 357388 Aug 12 16:24 19CF1345.trimmed_2U_fastqc.zip
+```
+
 ## Pipeline development suggestions
 
 - Specify specific verisons of software in pipeline conda env
