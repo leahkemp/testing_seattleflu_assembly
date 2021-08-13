@@ -5,4 +5,4 @@ Helping a colleague reviewing/testing the [seattleflu/assembly pipeline](https:/
 See:
 
 - [Review/testing of the pipeline](testing_pipeline.md)
-- [How to run pipeline on ESR data](how_to_run_guide.md)
+- [How to run pipeline on ESR system](how_to_run_guide.md)
