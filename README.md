@@ -1518,7 +1518,7 @@ total 18736
 ## Pipeline development suggestions
 
 - [X] Specify specific verisons of software in pipeline conda env
-- [] Write logs to file
+- [ ] Write logs to file
 - [X] Make input fastq file format optional - either lane-merged or not lane-merged
 
 ## Version of the pipline that takes pooled fastq files as inputs
