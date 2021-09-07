@@ -1524,3 +1524,7 @@ total 18736
 ## Version of the pipline that takes pooled fastq files as inputs
 
 https://github.com/leahkemp/assembly
+
+## Bug fixes
+
+After giving it a go, Una and I realised that the pipeline isn't outputing a consesnus fasta file as expected, notes on dealing with this bug [here](consensus_fasta_bug_fix.md)
